@@ -37,7 +37,3 @@ skills/<name>/
 ```
 
 Skills that need each other link as siblings, so the same relative path works in the repo and in `~/.claude/skills/`.
-
-## License
-
-MIT
