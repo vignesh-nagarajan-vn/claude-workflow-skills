@@ -12,11 +12,15 @@ Three ideas run through all of them:
 
 | Skill | What it does |
 | --- | --- |
-| [prose-guard](skills/prose-guard) | Keeps writing free of em dashes, AI tells, and bullet bloat. Detection runs as a script. |
+| [repo-scout](skills/repo-scout) | Maps an unfamiliar repo in one pass so you can skip the exploratory reads. |
+| [claude-md](skills/claude-md) | Writes and audits the contract future sessions start from, and catches it going stale. |
 | [docs-sync](skills/docs-sync) | Works out which docs a code change made stale, then opens only those. |
+| [prose-guard](skills/prose-guard) | Keeps writing free of em dashes, AI tells, and bullet bloat. Detection runs as a script. |
+| [readme-brand](skills/readme-brand) | The README house style, plus a checker for links, images, and heading anchors. |
+| [llm-pipeline](skills/llm-pipeline) | Architecture rules for code that calls a model, plus an audit for leaked keys. |
 | [session-handoff](skills/session-handoff) | Writes a short state file so the next session starts cold and cheap. |
 
-Planned next: LLM pipeline patterns, eval harnesses, and claim tracing for papers.
+Planned next: eval harnesses, and claim tracing for papers.
 
 ## Install
 
