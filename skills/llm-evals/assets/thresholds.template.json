@@ -1,0 +1,17 @@
+{
+  "_comment": "Commit this file. Change a threshold in its own commit with a reason in the message. Supported keys per metric: min, max, max_drop and max_rise (both need --baseline), warn_only. Nested results are addressed with dots, as in quality.grounded.",
+
+  "accuracy": { "min": 0.82, "max_drop": 0.03 },
+
+  "quality.grounded": { "min": 0.90 },
+  "quality.follows_format": { "min": 0.98 },
+
+  "latency_p50_ms": { "max": 1500 },
+  "latency_p95_ms": { "max": 4000 },
+
+  "cost_per_run_usd": { "max": 0.35, "max_rise": 0.05 },
+  "tokens_per_run": { "max": 20000 },
+
+  "refusal_rate": { "max": 0.02, "warn_only": true },
+  "schema_repair_rate": { "max": 0.05 }
+}

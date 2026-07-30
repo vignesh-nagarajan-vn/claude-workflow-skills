@@ -18,9 +18,9 @@ Three ideas run through all of them:
 | [prose-guard](skills/prose-guard) | Keeps writing free of em dashes, AI tells, and bullet bloat. Detection runs as a script. |
 | [readme-brand](skills/readme-brand) | The README house style, plus a checker for links, images, and heading anchors. |
 | [llm-pipeline](skills/llm-pipeline) | Architecture rules for code that calls a model, plus an audit for leaked keys. |
+| [llm-evals](skills/llm-evals) | Mock and live eval lanes, versioned thresholds, and a gate that fails on regressions. |
+| [claim-trace](skills/claim-trace) | Checks every number in a paper against the run artifacts it should have come from. |
 | [session-handoff](skills/session-handoff) | Writes a short state file so the next session starts cold and cheap. |
-
-Planned next: eval harnesses, and claim tracing for papers.
 
 ## Install
 
