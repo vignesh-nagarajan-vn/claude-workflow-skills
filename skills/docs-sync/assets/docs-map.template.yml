@@ -1,0 +1,56 @@
+# docs-map.yml
+#
+# Which docs depend on which source paths.
+# Keys are globs over repo-relative source paths. Values are the docs to review
+# when a matching file changes.
+#
+# Glob syntax: * matches within a path segment, ** matches across segments.
+#
+# Keep entries narrow. If one glob maps to five docs, those docs are probably
+# repeating each other, and that duplication is the thing to fix.
+#
+# Delete every example below that does not apply to this repo.
+
+# --- entry points and routes -------------------------------------------------
+"app/**":
+  - README.md
+
+"app/api/**":
+  - docs/API.md
+
+# --- config, environment, dependencies ---------------------------------------
+# These three go stale more often than anything else. Always map them.
+"package.json":
+  - README.md
+  - docs/DEPLOYMENT.md
+
+"pyproject.toml":
+  - README.md
+
+".env.example":
+  - docs/DEPLOYMENT.md
+  - README.md
+
+"Dockerfile":
+  - docs/DEPLOYMENT.md
+
+"docker-compose.yml":
+  - docs/DEPLOYMENT.md
+
+# --- schemas and public contracts --------------------------------------------
+"packages/schemas/**":
+  - docs/ARCHITECTURE.md
+
+"lib/**":
+  - CLAUDE.md
+
+# --- scripts and commands ----------------------------------------------------
+"scripts/**":
+  - README.md
+
+"Makefile":
+  - README.md
+
+# --- CI ----------------------------------------------------------------------
+".github/workflows/**":
+  - CONTRIBUTING.md
