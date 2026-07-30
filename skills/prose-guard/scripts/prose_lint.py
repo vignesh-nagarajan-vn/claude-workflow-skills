@@ -302,17 +302,25 @@ def fix_em_dashes(text: str) -> tuple[str, int]:
 # --------------------------------------------------------------------------
 
 def git_tracked_markdown(root: Path) -> list[Path]:
-    try:
-        result = subprocess.run(
-            ["git", "ls-files", "*.md", "*.markdown"],
-            cwd=root, capture_output=True, text=True, check=True,
-        )
-        paths = [root / p for p in result.stdout.splitlines() if p.strip()]
-        if paths:
-            return paths
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
-    return walk_markdown(root)
+    """Tracked markdown plus untracked-but-not-ignored markdown.
+
+    Untracked files are included deliberately: a file staged for its first
+    commit is exactly the one most likely to need linting, and leaving it out
+    lets new prose land unchecked.
+    """
+    names: list[str] = []
+    for extra in ([], ["--others", "--exclude-standard"]):
+        try:
+            result = subprocess.run(
+                ["git", "ls-files", *extra, "*.md", "*.markdown"],
+                cwd=root, capture_output=True, text=True, check=True,
+            )
+            names.extend(p for p in result.stdout.splitlines() if p.strip())
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return walk_markdown(root)
+
+    paths = [root / n for n in dict.fromkeys(names)]
+    return paths if paths else walk_markdown(root)
 
 
 def walk_markdown(root: Path) -> list[Path]:

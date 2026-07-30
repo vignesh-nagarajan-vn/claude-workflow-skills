@@ -5,7 +5,7 @@ description: Write, refresh, or audit a repo's CLAUDE.md onboarding contract so 
 
 # claude-md
 
-A good `CLAUDE.md` is the highest-leverage token artifact in a repo. It is read once per session and replaces the exploration that would otherwise happen every session. A stale one is worse than none, because it is trusted and wrong.
+A good `CLAUDE.md` pays back more tokens than anything else in a repo. It is read once per session and replaces the exploration that would otherwise happen every session. A stale one is worse than none, because it is trusted and wrong.
 
 ## Auditing an existing file
 
