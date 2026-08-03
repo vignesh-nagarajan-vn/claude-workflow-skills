@@ -1,9 +1,9 @@
 ---
-name: claude-md
+name: agent-contract
 description: Write, refresh, or audit a repo's CLAUDE.md onboarding contract so future sessions start from it instead of re-exploring. Use when a repo has no CLAUDE.md and will be worked in again, when asked to update or check it, when its paths or commands have gone stale, and after any change to layout, commands, or conventions. Runs scripts/verify_claude_md.py.
 ---
 
-# claude-md
+# agent-contract
 
 A good `CLAUDE.md` pays back more tokens than anything else in a repo. It is read once per session and replaces the exploration that would otherwise happen every session. A stale one is worse than none, because it is trusted and wrong.
 

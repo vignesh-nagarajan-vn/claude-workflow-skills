@@ -40,7 +40,7 @@ Then open at most two or three files, chosen from what the map showed. Do not op
 
 ## After scouting
 
-If the repo has no `CLAUDE.md` and you are going to work in it more than once, that is the moment to write one. See [claude-md](../claude-md/SKILL.md). The map you just generated is most of the input.
+If the repo has no `CLAUDE.md` and you are going to work in it more than once, that is the moment to write one. See [agent-contract](../agent-contract/SKILL.md). The map you just generated is most of the input.
 
 ## What this does not do
 
