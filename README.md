@@ -30,6 +30,8 @@ python install.py
 
 That copies each skill into `~/.claude/skills/`. Add `--dry-run` to see what it would touch, or `--force` to overwrite a skill you already have.
 
+Prebuilt zips for the Claude app (Settings > Capabilities > Skills) live in `zips/`.
+
 ## Layout
 
 ```

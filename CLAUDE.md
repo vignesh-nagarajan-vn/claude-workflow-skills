@@ -17,17 +17,25 @@ A personal set of Claude Code skills built around one constraint: cut tokens wit
 ## Layout
 
 ```
-install.py           copies skills/* into ~/.claude/skills/
+install.py             copies skills/* into ~/.claude/skills/
+scripts/build_zips.py  packages each skill folder into zips/<name>.zip
+zips/                  generated output, never hand-edited
 skills/<name>/
-  SKILL.md           frontmatter (name, description) + router body
-  references/        on-demand detail
-  scripts/           stdlib Python
-  assets/            templates meant to be copied into a target repo
+  SKILL.md             frontmatter (name, description) + router body
+  references/          on-demand detail
+  scripts/             stdlib Python
+  assets/              templates meant to be copied into a target repo
 ```
 
 ## Cross-references
 
 A skill that needs another skill's reference links to it as a sibling, for example `../prose-guard/references/rules.md`. That path resolves the same in this repo and in `~/.claude/skills/` after install, so there is no shared top-level directory and nothing to rewrite at install time.
+
+## Installing in the Claude app
+
+Claude Code reads `~/.claude/skills/` after `install.py`. The Claude app instead takes one zip per skill, uploaded under Settings > Capabilities > Skills, with the skill folder as the archive root. `python scripts/build_zips.py` builds those archives into `zips/`. Output is deterministic, so an unchanged skill rebuilds byte for byte and `zips/` only shows up in a diff when a skill really changed. After any change under `skills/`, rebuild `zips/` and commit the result. `python scripts/build_zips.py --check` confirms the archives are current without writing anything.
+
+Sibling links like `../prose-guard/references/rules.md` resolve only when the linked skill is installed next to the one linking to it. `install.py` copies every skill, so that holds. In the app it holds only if the user uploads every zip the skill depends on.
 
 ## Conventions
 
@@ -45,5 +53,6 @@ Run that before calling any doc change done.
 2. Write the `description` first. If you cannot make it trigger precisely in one sentence, the skill is scoped wrong.
 3. Ask what part is deterministic, and put that part in a script before writing any prose.
 4. Add a row to the README table.
+5. Rebuild `zips/` with `python scripts/build_zips.py` and commit the archives.
 
-Last verified: 2026-07-30.
+Last verified: 2026-08-06.
