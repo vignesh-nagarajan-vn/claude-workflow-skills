@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.9", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Tests
+        run: python -B -m unittest discover -s tests -v
+      - name: Zips are current
+        run: python -B scripts/build_zips.py --check
+      - name: Prose lint
+        run: python -B skills/prose-guard/scripts/prose_lint.py
+      - name: CLAUDE.md has no dead references
+        run: python -B skills/agent-contract/scripts/verify_claude_md.py
+      - name: Markdown links resolve
+        run: python -B skills/readme-brand/scripts/check_readme.py --all

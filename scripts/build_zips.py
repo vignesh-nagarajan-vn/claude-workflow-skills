@@ -31,6 +31,16 @@ DATE_TIME = (2020, 1, 1, 0, 0, 0)
 EXCLUDED_DIRS = {"__pycache__"}
 EXCLUDED_NAMES = {".DS_Store", "Thumbs.db"}
 EXCLUDED_SUFFIXES = {".pyc"}
+# Text is archived with LF endings whatever the checkout uses, so a Windows
+# clone with core.autocrlf builds the same bytes as everyone else.
+TEXT_SUFFIXES = {".md", ".py", ".yml", ".yaml", ".json", ".txt", ".toml", ".cfg"}
+
+
+def archived_bytes(path: Path) -> bytes:
+    data = path.read_bytes()
+    if path.suffix.lower() in TEXT_SUFFIXES:
+        data = data.replace(b"\r\n", b"\n")
+    return data
 
 
 def frontmatter_name(skill_md: Path) -> str | None:
@@ -77,7 +87,7 @@ def build_bytes(skill_dir: Path) -> bytes:
             info.compress_type = zipfile.ZIP_DEFLATED
             info.create_system = 3  # ZipInfo's default differs by platform
             info.external_attr = 0o644 << 16
-            archive.writestr(info, path.read_bytes())
+            archive.writestr(info, archived_bytes(path))
     return buf.getvalue()
 
 

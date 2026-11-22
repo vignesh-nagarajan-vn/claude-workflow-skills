@@ -43,3 +43,15 @@ skills/<name>/
 ```
 
 Skills that need each other link as siblings, so the same relative path works in the repo and in `~/.claude/skills/`.
+
+## Tests
+
+```bash
+python -m unittest discover -s tests
+```
+
+CI runs the tests on Linux and Windows, and checks that `zips/` is current, the prose lints clean, and every markdown link resolves.
+
+## License
+
+[MIT](LICENSE)
