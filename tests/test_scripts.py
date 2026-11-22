@@ -62,7 +62,7 @@ class TempRepo:
         for rel, text in files.items():
             path = self.root / rel
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(text, encoding="utf-8", newline="\n")
+            path.write_bytes(text.encode("utf-8"))  # LF as written, on every OS
 
     def commit(self, message: str) -> None:
         git(self.root, "add", "-A")
