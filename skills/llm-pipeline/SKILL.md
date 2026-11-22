@@ -19,7 +19,7 @@ The model inventory is worth reading even when there are no findings. It is the 
 
 **1. The model justifies, the code decides.** The model returns a per-item verdict with its reasoning. Any arithmetic, threshold, score, or final label is computed in code from those verdicts. When the rules change you edit one function, and the decision is inspectable without rerunning anything.
 
-**2. Every model output is schema-validated.** Never `JSON.parse` a completion and use it. Parse into a schema, and on failure feed the validation error back for a bounded number of repair attempts, then fail loudly. Unbounded repair loops are how a 3-cent call becomes a 3-dollar one.
+**2. Every model output is schema-validated.** Never `JSON.parse` a completion and use it. Where the provider supports structured outputs (on the Claude API, `output_config.format` or `strict: true` on a tool), let it enforce the schema and skip the repair loop. Still check in code what a schema cannot express, and treat a refusal or a `max_tokens` stop as a failure. Where it does not, parse into a schema, feed the validation error back for a bounded number of repair attempts, then fail loudly. Unbounded repair loops are how a 3-cent call becomes a 3-dollar one.
 
 **3. Keys never reach the client.** All provider calls happen server-side. No `NEXT_PUBLIC_` secret, no `dangerouslyAllowBrowser`. The audit catches all three forms.
 
@@ -41,7 +41,7 @@ Two more that compound: put the stable part of a long prompt first so it can be 
 
 ## Detail
 
-Read [references/patterns.md](references/patterns.md) when implementing one of these, not before. It has the shapes for the repair loop, the mock provider, the critic pass, stage streaming, and provenance.
+Read [references/patterns.md](references/patterns.md) when implementing one of these, not before. It has the shapes for structured outputs, the repair loop, the mock provider, the critic pass, stage streaming, and provenance.
 
 ## Reviewing a change
 

@@ -23,7 +23,32 @@ export function classify(verdicts: Verdict[]): Label {
 
 Why it holds up: the threshold can be retuned without touching a prompt, the arithmetic is unit-testable, and a reviewer can see exactly which evidence produced the label.
 
-## Schema plus bounded repair
+## Structured outputs first
+
+When the provider can constrain its output to a schema, use that and drop the repair loop. On the Claude API, `messages.parse` takes a Zod schema and returns typed output:
+
+```ts
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
+
+const response = await client.messages.parse({
+  model,
+  max_tokens: 4000,
+  messages: [{ role: 'user', content: prompt }],
+  output_config: { format: zodOutputFormat(VerdictList) },
+})
+if (!response.parsed_output) {
+  throw new Error(`no structured output, stop_reason ${response.stop_reason}`)
+}
+return response.parsed_output
+```
+
+`parsed_output` is null after a refusal or a `max_tokens` stop, so check it rather than asserting it. For a tool call, `strict: true` on the tool definition gives the same guarantee for its input.
+
+The schema guarantees shape, not truth. Rules a schema cannot express still belong in code: an id that must exist in the input, fields that must agree with each other, a count that must match.
+
+## Bounded repair, when the provider cannot constrain output
+
+For a provider or model without structured outputs:
 
 ```ts
 async function structured<T>(schema: z.ZodType<T>, prompt: string, tries = 2): Promise<T> {
