@@ -11,7 +11,7 @@ description: Architecture rules for code that calls an LLM. Code owns the decisi
 python <skill>/scripts/audit_llm_app.py
 ```
 
-It reports keys reachable from the browser, model output parsed without a schema, LLM routes with no timeout, and an inventory of which models are called from where. Deep checks run only on files that import an SDK, so the output stays short.
+It reports keys reachable from the browser, model output parsed without a schema, Next.js LLM routes with no `maxDuration`, and an inventory of which models are called from where. Deep checks run only on files that import an SDK, so the output stays short.
 
 The model inventory is worth reading even when there are no findings. It is the fastest way to see that an expensive model is doing a job a cheap one should.
 

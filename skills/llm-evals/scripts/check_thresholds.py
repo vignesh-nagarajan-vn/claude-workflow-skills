@@ -44,6 +44,17 @@ def dig(data: dict, dotted: str):
     return node if isinstance(node, (int, float)) and not isinstance(node, bool) else None
 
 
+def leaves(data, prefix: str = "") -> list[str]:
+    """Every numeric metric in nested results, as dotted paths."""
+    out: list[str] = []
+    if isinstance(data, dict):
+        for key, value in data.items():
+            out += leaves(value, f"{prefix}{key}.")
+    elif isinstance(data, (int, float)) and not isinstance(data, bool):
+        out.append(prefix[:-1])
+    return out
+
+
 def evaluate(results: dict, thresholds: dict, baseline: dict | None) -> list[dict]:
     rows: list[dict] = []
 
@@ -54,7 +65,9 @@ def evaluate(results: dict, thresholds: dict, baseline: dict | None) -> list[dic
         warn_only = bool(rule.get("warn_only"))
 
         if value is None:
-            rows.append({"metric": metric, "status": "missing", "value": None,
+            # A warn-only metric warns when absent too. It never fails the run.
+            rows.append({"metric": metric, "status": "warn" if warn_only else "missing",
+                         "value": None,
                          "detail": "declared in thresholds, absent from results",
                          "warn_only": warn_only})
             continue
@@ -90,7 +103,7 @@ def evaluate(results: dict, thresholds: dict, baseline: dict | None) -> list[dic
             "warn_only": warn_only,
         })
 
-    extra = [k for k in results if k not in thresholds and dig(results, k) is not None]
+    extra = [k for k in leaves(results) if k not in thresholds]
     for metric in sorted(extra):
         rows.append({"metric": metric, "value": dig(results, metric), "status": "ungated",
                      "detail": "reported but no threshold declared", "warn_only": False})

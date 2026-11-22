@@ -5,7 +5,7 @@ Stdlib only, no yaml dependency. Parses the restricted subset the template uses:
 a quoted or bare glob key, then an indented list of doc paths.
 
     python stale_docs.py                  # uncommitted work vs HEAD
-    python stale_docs.py --base main      # a whole branch
+    python stale_docs.py --base main      # a whole branch, since it forked
     python stale_docs.py --staged         # pre-commit hook
     python stale_docs.py --verify         # CI gate, nonzero if stale
     python stale_docs.py --init           # write a starter map
@@ -113,10 +113,10 @@ def glob_to_regex(pattern: str) -> re.Pattern:
 # Git
 # --------------------------------------------------------------------------
 
-def _git(args: list[str]) -> list[str]:
+def _git(args: list[str], cwd: Path | None = None) -> list[str]:
     try:
         result = subprocess.run(
-            ["git"] + args, capture_output=True, text=True, check=True,
+            ["git"] + args, capture_output=True, text=True, check=True, cwd=cwd,
         )
     except FileNotFoundError:
         print("error: git not found on PATH", file=sys.stderr)
@@ -127,14 +127,22 @@ def _git(args: list[str]) -> list[str]:
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
-def changed_files(base: str | None, staged: bool) -> list[str]:
+def repo_root() -> Path:
+    top = _git(["rev-parse", "--show-toplevel"])
+    return Path(top[0]) if top else Path.cwd()
+
+
+def changed_files(root: Path, base: str | None, staged: bool) -> list[str]:
+    """Paths relative to the repo root, the same form the map's globs use."""
     if staged:
-        return _git(["diff", "--name-only", "--cached"])
+        return _git(["diff", "--name-only", "--cached"], cwd=root)
+    changed = set(_git(["diff", "--name-only", "HEAD"], cwd=root))
+    changed |= set(_git(["ls-files", "--others", "--exclude-standard"], cwd=root))
     if base:
-        return _git(["diff", "--name-only", base])
-    tracked = _git(["diff", "--name-only", "HEAD"])
-    untracked = _git(["ls-files", "--others", "--exclude-standard"])
-    return sorted(set(tracked) | set(untracked))
+        # base...HEAD is what this branch changed since it forked. A plain diff
+        # against base would also count files that changed on base itself.
+        changed |= set(_git(["diff", "--name-only", f"{base}...HEAD"], cwd=root))
+    return sorted(changed)
 
 
 # --------------------------------------------------------------------------
@@ -162,7 +170,7 @@ def find_stale(mapping: dict[str, list[str]], changed: list[str]) -> tuple[dict,
     return stale, satisfied
 
 
-def report(stale: dict, satisfied: dict, changed: list[str], show_all: bool) -> None:
+def report(root: Path, stale: dict, satisfied: dict, changed: list[str], show_all: bool) -> None:
     if not changed:
         print("no changes detected")
         return
@@ -179,7 +187,7 @@ def report(stale: dict, satisfied: dict, changed: list[str], show_all: bool) -> 
 
     print(f"docs to review ({len(stale)}):")
     for doc in sorted(stale):
-        exists = "" if Path(doc).exists() else "   [missing on disk]"
+        exists = "" if (root / doc).exists() else "   [missing on disk]"
         print(f"  {doc}{exists}")
         seen = set()
         for source, pattern in stale[doc]:
@@ -196,8 +204,9 @@ def report(stale: dict, satisfied: dict, changed: list[str], show_all: bool) -> 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Find docs made stale by a code change.")
-    parser.add_argument("--map", default=str(DEFAULT_MAP), help=f"map file (default: {DEFAULT_MAP})")
-    parser.add_argument("--base", help="git ref to compare against, e.g. main")
+    parser.add_argument("--map", help=f"map file (default: {DEFAULT_MAP} at the repo root)")
+    parser.add_argument("--base", help="also count what this branch changed since it forked "
+                                       "from this ref, e.g. main")
     parser.add_argument("--staged", action="store_true", help="only staged changes")
     parser.add_argument("--verify", action="store_true", help="exit 1 if any mapped doc is stale")
     parser.add_argument("--all", action="store_true", help="also list docs already updated")
@@ -205,7 +214,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--init", action="store_true", help="write a starter map and exit")
     args = parser.parse_args(argv)
 
-    map_path = Path(args.map)
+    root = repo_root()
+    map_path = Path(args.map) if args.map else root / DEFAULT_MAP
 
     if args.init:
         if map_path.exists():
@@ -230,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {map_path} parsed to zero entries", file=sys.stderr)
         return 2
 
-    changed = changed_files(args.base, args.staged)
+    changed = changed_files(root, args.base, args.staged)
     stale, satisfied = find_stale(mapping, changed)
 
     if args.as_json:
@@ -240,7 +250,7 @@ def main(argv: list[str] | None = None) -> int:
             "satisfied": sorted(satisfied),
         }, indent=2))
     else:
-        report(stale, satisfied, changed, args.all)
+        report(root, stale, satisfied, changed, args.all)
 
     return 1 if (args.verify and stale) else 0
 

@@ -15,7 +15,7 @@ python <skill>/scripts/check_thresholds.py results.json --thresholds evals/thres
 
 Add `--baseline evals/baseline.json` to catch regressions that still clear the floor. A metric that stays above its minimum while dropping four points from last week is the failure that absolute thresholds miss.
 
-Exit code is 1 on any failure or any threshold whose metric is missing from the results.
+Exit code is 1 on any failure or any threshold whose metric is missing from the results, unless that threshold is `warn_only`.
 
 ## Two lanes
 

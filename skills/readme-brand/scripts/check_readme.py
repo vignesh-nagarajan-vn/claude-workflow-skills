@@ -34,9 +34,9 @@ FORMAT_RE = re.compile(r"[*_`~]")
 HTML_TAG_RE = re.compile(r"<[^>]+>")
 
 
-def _git(args: list[str]) -> str:
+def _git(args: list[str], cwd: Path | None = None) -> str:
     try:
-        r = subprocess.run(["git"] + args, capture_output=True, text=True, check=True)
+        r = subprocess.run(["git"] + args, capture_output=True, text=True, check=True, cwd=cwd)
         return r.stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
@@ -184,9 +184,10 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(_git(["rev-parse", "--show-toplevel"]).strip() or Path.cwd())
 
     if args.all:
-        names = [n for n in _git(["ls-files", "*.md"]).splitlines() if n.strip()]
+        # From the root, so the listed paths join onto it from any subdirectory.
+        names = [n for n in _git(["ls-files", "*.md"], cwd=root).splitlines() if n.strip()]
         names += [n for n in _git(["ls-files", "--others", "--exclude-standard",
-                                   "*.md"]).splitlines() if n.strip()]
+                                   "*.md"], cwd=root).splitlines() if n.strip()]
         targets = [root / n for n in dict.fromkeys(names)]
     elif args.paths:
         targets = [Path(p) for p in args.paths]

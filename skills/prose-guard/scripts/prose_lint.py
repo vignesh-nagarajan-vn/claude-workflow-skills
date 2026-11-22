@@ -124,6 +124,11 @@ def mask(line: str) -> str:
     return line
 
 
+# The directive counts only as a comment on a line of its own. A line that merely
+# mentions it, such as docs describing the directive, does not switch linting off.
+_DIRECTIVE_RE = re.compile(r"^\s*<!--\s*prose-lint:\s*(off|on)\s*-->\s*$", re.I)
+
+
 def masked_lines(text: str) -> list[str]:
     """Return each line masked, with fenced code blocks and lint-off regions blanked."""
     out: list[str] = []
@@ -135,13 +140,9 @@ def masked_lines(text: str) -> list[str]:
             in_fence = not in_fence
             out.append("")
             continue
-        low = raw.lower()
-        if "prose-lint: off" in low:
-            linting = False
-            out.append("")
-            continue
-        if "prose-lint: on" in low:
-            linting = True
+        directive = None if in_fence else _DIRECTIVE_RE.match(raw)
+        if directive:
+            linting = directive.group(1).lower() == "on"
             out.append("")
             continue
         out.append(mask(raw) if (linting and not in_fence) else "")
@@ -274,24 +275,49 @@ def _check_bullets(rel: str, lines: list[str]) -> list[Finding]:
 # Fixing
 # --------------------------------------------------------------------------
 
+# A bold or code term opening a line or list item, then a dash: a definition.
+_TERM_DASH_RE = re.compile(
+    r"^(\s*(?:(?:[-*+]|\d+[.)])\s+)?(?:\*\*[^*]+\*\*|`[^`]+`))\s*" + EM_DASH + r"\s*")
+_CLOSING_PUNCT = tuple(".,;:!?)")
+
+
+def _fix_line(raw: str, masked: str) -> tuple[str, int]:
+    """Rewrite the two em dash shapes whose replacement is not a judgment call.
+
+    A definition (a bold or code term, then a dash) takes a colon. A pair of
+    dashes around an aside takes commas. Anything else, and any dash inside
+    code, a URL, or a lint-off region, is left for a person and still reported.
+    """
+    live = [i for i, ch in enumerate(masked) if ch == EM_DASH]
+    if len(live) == 1:
+        m = _TERM_DASH_RE.match(raw)
+        if m and m.start() <= live[0] < m.end():
+            return m.group(1) + ": " + raw[m.end():], 1
+        return raw, 0
+    if len(live) == 2:
+        first, second = live
+        before = raw[:first].rstrip()
+        aside = raw[first + 1:second].strip()
+        after = raw[second + 1:].lstrip()
+        if not before or not aside:
+            return raw, 0
+        joiner = "" if (not after or after.startswith(_CLOSING_PUNCT)) else ", "
+        return f"{before}, {aside}{joiner}{after}", 2
+    return raw, 0
+
+
 def fix_em_dashes(text: str) -> tuple[str, int]:
     """Rewrite only the unambiguous em dash forms. Everything else is left alone."""
+    raw_lines = text.splitlines()
+    masked = masked_lines(text)
     out_lines = []
     count = 0
-    in_fence = False
-    for raw in text.splitlines():
-        stripped = raw.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_fence = not in_fence
+    for raw, mask_line in zip(raw_lines, masked):
+        if EM_DASH not in mask_line:
             out_lines.append(raw)
             continue
-        if in_fence or EM_DASH not in raw:
-            out_lines.append(raw)
-            continue
-        new = re.sub(r"\s*" + re.escape(EM_DASH) + r"\s*", ", ", raw)
-        new = re.sub(r",\s*,", ",", new)
-        new = re.sub(r"\s+,", ",", new)
-        count += raw.count(EM_DASH)
+        new, n = _fix_line(raw, mask_line)
+        count += n
         out_lines.append(new)
     trailing = "\n" if text.endswith("\n") else ""
     return "\n".join(out_lines) + trailing, count
@@ -359,7 +385,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="minimum severity that makes this exit nonzero (default: high)")
     parser.add_argument("--min-severity", choices=SEVERITIES, default="medium",
                         help="minimum severity to report (default: medium)")
-    parser.add_argument("--fix", action="store_true", help="rewrite unambiguous em dashes in place")
+    parser.add_argument("--fix", action="store_true",
+                        help="rewrite the unambiguous em dash shapes in place, report the rest")
     parser.add_argument("--stats", action="store_true", help="print counts by rule instead of findings")
     parser.add_argument("--json", dest="as_json", action="store_true", help="emit JSON")
     parser.add_argument("--exclude", action="append", default=[], help="substring of paths to skip, repeatable")
@@ -385,7 +412,8 @@ def main(argv: list[str] | None = None) -> int:
                 path.write_text(new_text, encoding="utf-8")
                 fixed_files += 1
                 fixed_dashes += n
-        print(f"fixed {fixed_dashes} em dash(es) across {fixed_files} file(s); re-read those lines")
+        print(f"fixed {fixed_dashes} em dash(es) across {fixed_files} file(s); "
+              "re-read those lines, the rest need a manual rewrite")
 
     findings: list[Finding] = []
     for path in targets:

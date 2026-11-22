@@ -57,9 +57,9 @@ PLACEHOLDER_HINTS = ("<", ">", "*", "{", "}", "...", "$", "|")
 IGNORE_PREFIX = ("http://", "https://", "#", "mailto:", "tel:")
 
 
-def _git(args: list[str]) -> str:
+def _git(args: list[str], cwd: Path | None = None) -> str:
     try:
-        r = subprocess.run(["git"] + args, capture_output=True, text=True, check=True)
+        r = subprocess.run(["git"] + args, capture_output=True, text=True, check=True, cwd=cwd)
         return r.stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
@@ -159,7 +159,8 @@ def known_commands(root: Path) -> tuple[set[str], bool]:
 
 def tracked(root: Path) -> tuple[set[str], set[str], set[str]]:
     """Return (full relative paths, file basenames, directory names)."""
-    out = _git(["ls-files"])
+    # From the root, so the listed paths are root-relative like the references.
+    out = _git(["ls-files"], cwd=root)
     full = {p.strip() for p in out.splitlines() if p.strip()}
     files = {Path(p).name for p in full}
     dirs: set[str] = set()

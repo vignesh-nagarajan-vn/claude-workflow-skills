@@ -27,10 +27,16 @@ WEB_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", ".next"}
 MAX_BYTES = 1_000_000
 
+# An actual import, not just the package name, which also appears in dependency
+# tables and docs.
 SDK_RE = re.compile(
-    r"@anthropic-ai/sdk|from\s+['\"]openai['\"]|\bimport\s+anthropic\b|\bimport\s+openai\b"
-    r"|\bfrom\s+anthropic\b|\bfrom\s+openai\b|messages\.create|chat\.completions\.create"
+    r"(?:\bfrom|\brequire\(|\bimport)\s*['\"](?:@anthropic-ai/sdk|openai)['\"/]"
+    r"|\bimport\s+anthropic\b|\bimport\s+openai\b|\bfrom\s+anthropic\b|\bfrom\s+openai\b"
 )
+# A bare messages.create also matches Twilio and Slack clients, so a call only
+# counts when the same file also passes a model or a token cap.
+CALL_RE = re.compile(r"messages\.(?:create|stream|parse)\s*\(|chat\.completions\.create\s*\(")
+LLM_ARG_RE = re.compile(r"\bmax_(?:completion_)?tokens\b|\bmaxTokens\b|\bmodel\s*[=:]")
 SCHEMA_RE = re.compile(r"\bfrom\s+['\"]zod['\"]|\brequire\(['\"]zod['\"]\)|\bz\.object\("
                        r"|\bpydantic\b|\bBaseModel\b|\bajv\b|\bvalibot\b|instructor")
 MODEL_RE = re.compile(r"['\"](claude-[a-z0-9.\-]+|gpt-[a-z0-9.\-]+|o[134](?:-[a-z0-9]+)?)['\"]")
@@ -48,19 +54,30 @@ PARSE_RE = re.compile(r"JSON\.parse\s*\(\s*([A-Za-z_$][\w$.]*)|json\.loads\s*\(\
 MODEL_VAR_RE = re.compile(r"(completion|response|message|content|text|output|result|raw|reply|body)",
                           re.I)
 MAX_DURATION_RE = re.compile(r"\bmaxDuration\b")
-ROUTE_RE = re.compile(r"(^|/)(route|handler)\.(ts|js)$|(^|/)api/")
+# maxDuration is a Next.js on Vercel setting, so only Next route conventions are
+# checked: app router route files and pages/api handlers.
+NEXT_ROUTE_RE = re.compile(r"(^|/)app/(.+/)?route\.(ts|js|mjs)$|(^|/)pages/api/.+\.(ts|js|mjs)$")
 
 
-def _git(args: list[str]) -> str:
+def _git(args: list[str], cwd: Path | None = None) -> str:
     try:
-        r = subprocess.run(["git"] + args, capture_output=True, text=True, check=True)
+        r = subprocess.run(["git"] + args, capture_output=True, text=True, check=True, cwd=cwd)
         return r.stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
 
 
+def _inside(path: Path, folder: Path) -> bool:
+    try:
+        path.resolve().relative_to(folder)
+        return True
+    except ValueError:
+        return False
+
+
 def list_files(root: Path, scope: str | None) -> list[Path]:
-    out = _git(["ls-files"])
+    # From the root, so ls-files output joins onto root from any subdirectory.
+    out = _git(["ls-files"], cwd=root)
     if out:
         paths = [root / p.strip() for p in out.splitlines() if p.strip()]
     else:
@@ -68,9 +85,17 @@ def list_files(root: Path, scope: str | None) -> list[Path]:
                  if p.is_file() and not any(d in p.parts for d in SKIP_DIRS)]
     paths = [p for p in paths if p.suffix.lower() in CODE_EXT and p.is_file()]
     if scope:
-        prefix = str((root / scope).resolve())
-        paths = [p for p in paths if str(p.resolve()).startswith(prefix)]
+        folder = (root / scope).resolve()
+        paths = [p for p in paths if _inside(p, folder)]
     return paths
+
+
+def vercel_sets_duration(root: Path) -> bool:
+    config = root / "vercel.json"
+    try:
+        return config.is_file() and "maxDuration" in config.read_text(encoding="utf-8")
+    except OSError:
+        return False
 
 
 class Finding:
@@ -90,6 +115,7 @@ def audit(root: Path, scope: str | None) -> dict:
     findings: list[Finding] = []
     models: dict[str, set] = defaultdict(set)
     llm_files: list[str] = []
+    duration_in_config = vercel_sets_duration(root)
 
     for path in list_files(root, scope):
         try:
@@ -104,7 +130,8 @@ def audit(root: Path, scope: str | None) -> dict:
         head = "\n".join(lines[:20])
         is_web = path.suffix.lower() in WEB_EXT
         is_client = any(USE_CLIENT_RE.match(ln) for ln in lines[:10])
-        touches_llm = bool(SDK_RE.search(text))
+        touches_llm = bool(SDK_RE.search(text)) or bool(
+            CALL_RE.search(text) and LLM_ARG_RE.search(text))
         if touches_llm:
             llm_files.append(rel)
 
@@ -137,9 +164,11 @@ def audit(root: Path, scope: str | None) -> dict:
                                             f"parsing '{var}' with no schema in this file, "
                                             "validate and repair instead"))
 
-        if is_web and ROUTE_RE.search(rel) and not MAX_DURATION_RE.search(text):
+        if (NEXT_ROUTE_RE.search(rel) and not duration_in_config
+                and not MAX_DURATION_RE.search(text)):
             findings.append(Finding("medium", "no-timeout", rel, 1,
-                                    "LLM route with no maxDuration, long calls will be cut off"))
+                                    "Next.js route calls an LLM with no maxDuration, "
+                                    "the platform default can cut long calls off"))
 
     return {
         "llm_files": sorted(llm_files),
