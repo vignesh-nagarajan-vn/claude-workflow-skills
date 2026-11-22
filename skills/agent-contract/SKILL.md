@@ -22,7 +22,7 @@ Flags: `--max-lines N` to change the ceiling (default 200), `--file PATH` for a 
 Start from [repo-scout](../repo-scout/SKILL.md), whose map is most of the input:
 
 ```bash
-python ../repo-scout/scripts/repo_scout.py
+python <skill>/../repo-scout/scripts/repo_scout.py
 ```
 
 Then follow the section order in [references/format.md](references/format.md). Read that file when writing or restructuring, not for a small edit.

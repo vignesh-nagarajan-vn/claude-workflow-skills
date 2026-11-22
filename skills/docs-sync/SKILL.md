@@ -27,7 +27,7 @@ That writes `.claude/docs-map.yml` from a template. Fill it in against the actua
 
 | Flag | Effect |
 | --- | --- |
-| `--base main` | Compare against a branch instead of uncommitted work. Use when reviewing a whole PR. |
+| `--base main` | Also count everything this branch changed since it forked from `main`. Use when reviewing a whole PR. |
 | `--staged` | Only what is staged. Use from a pre-commit hook. |
 | `--verify` | Exit nonzero if a mapped doc is stale and was not itself edited. Use in CI. |
 | `--json` | Machine readable. |

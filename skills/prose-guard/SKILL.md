@@ -22,7 +22,7 @@ Then fix what it found, and re-run until clean.
 | Flag | Effect |
 | --- | --- |
 | `--fail-on medium` | Treat medium findings as failures too. Use on docs meant for other people. |
-| `--fix` | Rewrites only the unambiguous em dash cases, then reports the rest. Always re-read the touched lines afterwards. |
+| `--fix` | Rewrites the two unambiguous shapes: a pair of dashes around an aside becomes commas, and a dash after a bold or code term that opens a line becomes a colon. Reports the rest. Re-read the touched lines afterwards. |
 | `--json` | Machine-readable, for wiring into a hook or CI. |
 | `--stats` | Counts by rule instead of per-line findings. Use on a large first pass. |
 

@@ -21,11 +21,13 @@ import json
 import re
 import subprocess
 import sys
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 ARTIFACT_EXT = {".csv", ".tsv", ".json", ".md", ".txt", ".log", ".yml", ".yaml"}
 RESULT_DIR_NAMES = ("results", "outputs", "output", "artifacts", "runs", "run")
 MAX_BYTES = 20_000_000
+MAX_PLACES = 8
 
 NUMBER_RE = re.compile(r"(?<![\w.])(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)\s*(\\?%)?")
 
@@ -63,15 +65,24 @@ def strip_noise(line: str, is_tex: bool) -> str:
     return line
 
 
+def decimal_places(token: str) -> int:
+    """Precision a number is written at: 0.847 -> 3, 1.5e-3 -> 4, 12 -> 0."""
+    try:
+        return max(0, -Decimal(token).as_tuple().exponent)
+    except (InvalidOperation, TypeError):
+        return 0
+
+
 def is_claim(text: str, is_percent: bool, min_decimals: int, include_integers: bool) -> bool:
-    digits = text.lstrip("-").replace(".", "")
+    digits = text.lstrip("-").split("e")[0].split("E")[0].replace(".", "")
     if len(digits) > 8:
         return False                      # ACM concept ids, DOIs, hashes
-    if "." in text:
-        decimals = len(text.split(".")[-1].split("e")[0].split("E")[0])
-        return decimals >= min_decimals
     if is_percent:
-        return True
+        # 84.7% is the fraction 0.847, so a percent carries two more places of
+        # precision than it shows.
+        return decimal_places(text) + 2 >= min_decimals
+    if "." in text:
+        return decimal_places(text) >= min_decimals
     if not include_integers:
         return False
     value = abs(float(text))
@@ -172,8 +183,9 @@ def artifact_values(results: Path) -> tuple[dict[str, set[str]], dict[str, int],
     index: dict[str, set[str]] = {}
     counts: dict[str, int] = {}
     for value, owners in seen.items():
-        for places in range(0, 7):
-            for magnitude in (value, abs(value)):
+        for places in range(0, MAX_PLACES + 1):
+            # A set, so a positive value is counted once, not once per spelling.
+            for magnitude in {value, abs(value)}:
                 form = f"{magnitude:.{places}f}"
                 counts[form] = counts.get(form, 0) + 1
                 slot = index.setdefault(form, set())
@@ -183,13 +195,23 @@ def artifact_values(results: Path) -> tuple[dict[str, set[str]], dict[str, int],
     return index, counts, files
 
 
-def normalize(token: str) -> list[str]:
+def normalize(token: str, percent: bool = False) -> list[str]:
+    """Rounded forms an artifact value must match. A percent also matches its
+    fraction, so 84.7% traces to 0.847 as well as to 84.7."""
     try:
         value = float(token)
     except ValueError:
         return []
-    places = len(token.split(".")[-1]) if "." in token else 0
-    forms = {f"{value:.{places}f}", f"{abs(value):.{places}f}"}
+    places = decimal_places(token)
+    candidates = [(value, places)]
+    if percent:
+        candidates.append((value / 100, places + 2))
+    forms = set()
+    for number, digits in candidates:
+        if digits > MAX_PLACES:
+            continue
+        forms.add(f"{number:.{digits}f}")
+        forms.add(f"{abs(number):.{digits}f}")
     return sorted(forms)
 
 
@@ -276,7 +298,7 @@ def main(argv: list[str] | None = None) -> int:
     index, counts, files = artifact_values(results)
 
     for claim in claims:
-        forms = normalize(claim["value"])
+        forms = normalize(claim["value"], claim["percent"])
         matches = max((counts.get(f, 0) for f in forms), default=0)
         owners: set[str] = set()
         for f in forms:

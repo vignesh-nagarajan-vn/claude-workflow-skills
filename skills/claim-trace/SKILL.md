@@ -43,6 +43,8 @@ For a headline number, keep the path: name the artifact file in a comment next t
 
 The script reads CSV, TSV, JSON, Markdown, text, log, and YAML artifacts. It does not open plots, notebooks, or binary formats, so a number that exists only inside a PNG will read as untraced.
 
+Percents match both ways: `84.7%` traces to an artifact value of `84.7` or of `0.847`.
+
 It checks that a number exists in the artifacts. It does not check that the number means what the sentence around it says. A value correctly copied into the wrong claim still passes.
 
 Exit code is 1 when anything is untraced, so this works as a pre-submission gate.

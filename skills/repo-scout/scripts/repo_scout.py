@@ -55,24 +55,34 @@ ENTRY_CANDIDATES = [
 # Collection
 # --------------------------------------------------------------------------
 
-def _git(args: list[str]) -> str:
+def _git(args: list[str], cwd: Path | None = None) -> str:
     try:
-        r = subprocess.run(["git"] + args, capture_output=True, text=True, check=True)
+        r = subprocess.run(["git"] + args, capture_output=True, text=True, check=True, cwd=cwd)
         return r.stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
 
 
+def _inside(path: Path, folder: Path) -> bool:
+    try:
+        path.resolve().relative_to(folder)
+        return True
+    except ValueError:
+        return False
+
+
 def list_files(root: Path, scope: str | None) -> list[Path]:
-    out = _git(["ls-files"])
+    # Run from the root: ls-files prints paths relative to the current
+    # directory, so from a subdirectory they would not join onto root.
+    out = _git(["ls-files"], cwd=root)
     if out:
         paths = [root / p.strip() for p in out.splitlines() if p.strip()]
     else:
         paths = [p for p in root.rglob("*")
                  if p.is_file() and not any(d in p.parts for d in SKIP_DIRS)]
     if scope:
-        prefix = (root / scope).resolve()
-        paths = [p for p in paths if str(p.resolve()).startswith(str(prefix))]
+        folder = (root / scope).resolve()
+        paths = [p for p in paths if _inside(p, folder)]
     return [p for p in paths if p.is_file()]
 
 
@@ -195,8 +205,8 @@ def detect_entries(root: Path, files: set[str]) -> list[str]:
     return list(dict.fromkeys(entries))[:10]
 
 
-def hot_files(since: str, tracked: set[str]) -> list[tuple[str, int]]:
-    out = _git(["log", f"--since={since}", "--name-only", "--pretty=format:"])
+def hot_files(root: Path, since: str, tracked: set[str]) -> list[tuple[str, int]]:
+    out = _git(["log", f"--since={since}", "--name-only", "--pretty=format:"], cwd=root)
     if not out:
         return []
     counts = Counter(ln.strip() for ln in out.splitlines()
@@ -245,7 +255,7 @@ def build(root: Path, scope: str | None, since: str) -> dict:
         "dirs": [(d, dir_files[d], dir_lines[d])
                  for d, _ in dir_lines.most_common(10)],
         "largest": sorted(code_lines.items(), key=lambda kv: -kv[1])[:8],
-        "hot": hot_files(since, set(rel)),
+        "hot": hot_files(root, since, set(rel)),
         "docs": docs[:12],
         "since": since,
     }

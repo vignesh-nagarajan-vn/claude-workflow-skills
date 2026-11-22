@@ -20,6 +20,9 @@ A personal set of Claude Code skills built around one constraint: cut tokens wit
 install.py             copies skills/* into ~/.claude/skills/
 scripts/build_zips.py  packages each skill folder into zips/<name>.zip
 zips/                  generated output, never hand-edited
+tests/                 stdlib unittest suite for every script
+.github/workflows/     CI: tests, zip check, prose lint, link check
+.gitattributes         LF checkouts everywhere, so zips rebuild byte for byte
 skills/<name>/
   SKILL.md             frontmatter (name, description) + router body
   references/          on-demand detail
@@ -47,12 +50,21 @@ python skills/prose-guard/scripts/prose_lint.py
 
 Run that before calling any doc change done.
 
+Script changes need a test in `tests/test_scripts.py`, and the suite must pass:
+
+```bash
+python -m unittest discover -s tests
+```
+
+Scripts must work when run from any subdirectory of the target repo. Run `git ls-files` with `cwd` set to the repo root, because its output is relative to the current directory.
+
 ## Adding a skill
 
 1. Confirm no shipped skill already covers it.
 2. Write the `description` first. If you cannot make it trigger precisely in one sentence, the skill is scoped wrong.
 3. Ask what part is deterministic, and put that part in a script before writing any prose.
 4. Add a row to the README table.
-5. Rebuild `zips/` with `python scripts/build_zips.py` and commit the archives.
+5. Add tests for its script to `tests/test_scripts.py`.
+6. Rebuild `zips/` with `python scripts/build_zips.py` and commit the archives.
 
-Last verified: 2026-08-06.
+Last verified: 2026-11-22.

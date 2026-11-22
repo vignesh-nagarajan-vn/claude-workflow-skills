@@ -19,7 +19,7 @@ python <skill>/scripts/repo_scout.py
 
 That reports the stack, entry points, directories ranked by size, the largest files, the files changed most recently, and where the docs are.
 
-Then open at most two or three files, chosen from what the map showed. Do not open a file to confirm something the map already said.
+Then open the files the map points to for your question, usually two or three. Open a file for what the map cannot tell you, such as behavior and conventions, not to confirm what it already said.
 
 ## Flags
 

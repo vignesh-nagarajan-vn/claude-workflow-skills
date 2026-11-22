@@ -52,7 +52,7 @@ A README past roughly 150 lines is usually holding something that belongs in `do
 Prose follows [prose-guard's rules](../prose-guard/references/rules.md), which bite hardest here. READMEs attract marketing vocabulary more than any other file in a repo. Run the linter when done:
 
 ```bash
-python ../prose-guard/scripts/prose_lint.py README.md
+python <skill>/../prose-guard/scripts/prose_lint.py README.md
 ```
 
 Alt text describes the moment, not the asset. "The ledger filling in beside the real record, then a thread pulled to an event's causes" beats "screenshot of the dashboard".

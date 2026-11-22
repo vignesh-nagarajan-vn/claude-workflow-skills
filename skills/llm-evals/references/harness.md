@@ -43,7 +43,7 @@ Report how many cases improved, how many regressed, and how many were unchanged.
 
 Run the suite twice with no changes and record the spread. That spread is your noise floor, and any change smaller than it is not a result. Write the number down in the eval README, because everyone who reads a result later needs it.
 
-For a metric near the floor, raise the sample count or the temperature discipline rather than arguing about a one-point move.
+For a metric near the floor, raise the sample count rather than arguing about a one-point move. Lowering `temperature` is not an option on current Claude models, which reject sampling parameters, so more samples and repeated runs are the way to shrink the noise.
 
 ## Budget capping
 
